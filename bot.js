@@ -7,6 +7,13 @@ var channel;
 var guild;
 var players = [];
 
+let voices = [
+  { voice: 'Microsoft David Desktop' },
+  { voice: 'Microsoft Zira Desktop' }
+]
+
+
+
 client.once('ready', () => {
 	console.log('Ready!');
 });
