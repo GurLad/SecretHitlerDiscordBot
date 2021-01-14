@@ -33,7 +33,7 @@ function gotMessage(msg)
 		}
 		channel = msg.guild.me.voice.channel;
 	}
-	msg.reply('Hi 😔');
+	msg.reply('Hi 😀');
 	sayIt(msg, msg.content);
 }
 
