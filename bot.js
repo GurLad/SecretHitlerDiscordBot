@@ -6,11 +6,11 @@ require('dotenv').config();
 var channel;
 var guild;
 var players = [];
+var voice = null;
+var voicePrefix = "Microsoft ";
+var voiceSuffix = " Desktop";
 
-let voices = [
-  { voice: 'Microsoft David Desktop' },
-  { voice: 'Microsoft Zira Desktop' }
-]
+let voices = [ "David", "Hazel", "Zira" ];
 
 
 
@@ -44,9 +44,28 @@ function gotMessage(msg)
 		guild = msg.guild;
 	}
 	var member = guild.member(msg.author);
-	if (msg.content.includes('!say'))
+	if (msg.content.includes('!say '))
 	{
 		saySomething(member.displayName + " said " + msg.content.replace('!say', ''));
+		return;
+	}
+	else if (msg.content.includes('!setVoice '))
+	{
+		var input = msg.content.replace('!setVoice ', '')
+		if (voices.includes(input))
+		{
+			voice = voicePrefix + input + voiceSuffix;
+			saySomething("Hello there! I'm your new narrator!");
+		}
+		else
+		{
+			msg.reply('Invalid voice!');
+		}
+		return;
+	}
+	else if (msg.content.includes('!listVoices'))
+	{
+		msg.reply(voices.join());
 		return;
 	}
 	if (!players.includes(member))
@@ -70,7 +89,7 @@ function saySomething(text)
 {
     const timestamp = new Date().getTime();
     const soundPath = `./temp/${timestamp}.wav`;
-    say.export(text, null, 1, soundPath, (err) => {
+    say.export(text, voice, 1, soundPath, (err) => {
         if (err) {
             console.error(err);
             return;
