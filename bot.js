@@ -17,15 +17,24 @@ client.login(process.env.DISCORD_KEY);
 
 function gotMessage(msg) 
 {
-	if (message.author.id === client.user.id)
+	if (msg.author.id === client.user.id)
 	{
 		return;
 	}
-	//if (msg.content === 'Hello')
+	if (channel == null)
 	{
-		msg.reply('Hi 😔');
-		sayIt(msg, msg.content)
+		// Checking if the message author is in a voice channel.
+		if (!msg.member.voice.channel) return msg.reply("You must be in a voice channel.");
+		// Checking if the bot is in a voice channel.
+		if (!msg.guild.me.voice.channel)
+		{
+			// Joining the channel and creating a VoiceConnection.
+			msg.member.voice.channel.join();
+		}
+		channel = msg.guild.me.voice.channel;
 	}
+	msg.reply('Hi 😔');
+	sayIt(msg, msg.content);
 }
 
 function gotReaction(reaction, user)
@@ -35,13 +44,6 @@ function gotReaction(reaction, user)
 
 function sayIt(message, text)
 {
-	// Checking if the message author is in a voice channel.
-    if (!message.member.voice.channel) return message.reply("You must be in a voice channel.");
-    // Checking if the bot is in a voice channel.
-    if (message.guild.me.voice.channel) return message.reply("I'm already playing.");
-
-    // Joining the channel and creating a VoiceConnection.
-    message.member.voice.channel.join();
 	
 	saySomething(message.member.voice.channel, text);
 }
