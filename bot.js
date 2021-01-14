@@ -17,6 +17,10 @@ client.login(process.env.DISCORD_KEY);
 
 function gotMessage(msg) 
 {
+	if (message.author.id === client.user.id)
+	{
+		return;
+	}
 	//if (msg.content === 'Hello')
 	{
 		msg.reply('Hi 😔');
