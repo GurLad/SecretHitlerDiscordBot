@@ -4,6 +4,8 @@ const say = require('say');
 require('dotenv').config();
 
 var channel;
+var guild;
+var players = [];
 
 client.once('ready', () => {
 	console.log('Ready!');
@@ -32,9 +34,19 @@ function gotMessage(msg)
 			msg.member.voice.channel.join();
 		}
 		channel = msg.guild.me.voice.channel;
+		guild = msg.guild;
 	}
-	msg.reply('Hi 😀');
-	sayIt(msg, msg.content);
+	if (!players.includes(msg.author))
+	{
+		var member = guild.member(msg.author);
+		players.push(member);
+		msg.reply('Hi 😀\nThere are ' + players.length + ' players.');
+		saySomething(member.displayName + " joined the game!");
+	}
+	else
+	{
+		msg.reply("You're already in the game!")
+	}
 }
 
 function gotReaction(reaction, user)
@@ -42,13 +54,7 @@ function gotReaction(reaction, user)
 	reaction.message.reply('You reacted!');
 }
 
-function sayIt(message, text)
-{
-	
-	saySomething(message.member.voice.channel, text);
-}
-
-function saySomething(voiceChannel, text)
+function saySomething(text)
 {
     const timestamp = new Date().getTime();
     const soundPath = `./temp/${timestamp}.wav`;
@@ -57,7 +63,7 @@ function saySomething(voiceChannel, text)
             console.error(err);
             return;
         }else{
-            voiceChannel.join().then((connection) => {
+            channel.join().then((connection) => {
                 connection.play(soundPath);
             }).catch((err) => {
                 console.error(err);
