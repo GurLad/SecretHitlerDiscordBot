@@ -36,9 +36,14 @@ function gotMessage(msg)
 		channel = msg.guild.me.voice.channel;
 		guild = msg.guild;
 	}
-	if (!players.includes(msg.author))
+	var member = guild.member(msg.author);
+	if (msg.content.includes('!say'))
 	{
-		var member = guild.member(msg.author);
+		saySomething(member.displayName + " said " + msg.content.replace('!say', ''));
+		return;
+	}
+	if (!players.includes(member))
+	{
 		players.push(member);
 		msg.reply('Hi 😀\nThere are ' + players.length + ' players.');
 		saySomething(member.displayName + " joined the game!");
