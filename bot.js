@@ -3,11 +3,14 @@ const client = new Discord.Client();
 const say = require('say');
 require('dotenv').config();
 
+GameState = { INIT : 1, NOMINATE_CHANCELLOR : 2, PLAYER_VOTE : 3, PRESIDENT_DISCARD : 4, CHANCELLOR_DISCARD : 5, KILL : 6 }
+
+
 var channel;
 var guild;
 var connection;
+var textChannel;
 
-var players = [];
 var voice = null;
 var voicePrefix = "Microsoft ";
 var voiceSuffix = " Desktop";
@@ -15,8 +18,12 @@ var prefix = "!";
 
 var voices = [ "David", "Hazel", "Zira" ];
 
+var players = [];
 var hitlerID = -1;
 var facistsIDs = [];
+var numLiberal = 0;
+var numFacist = 0;
+var currentState = GameState.INIT;
 
 
 
@@ -49,6 +56,7 @@ async function gotMessage(message)
 		channel = message.guild.me.voice.channel;
 		connection = await channel.join();
 		guild = message.guild;
+		textChannel = message.channel;
 	}
 	var member = guild.member(message.author);
 	// Commands
@@ -76,41 +84,49 @@ async function gotMessage(message)
 				message.reply(voices.join());
 				break;
 			case 'start':
-				playersWithoutRoles = players.slice();
-				hitlerID = getRandomInt(players.length);
-				playersWithoutRoles.splice(hitlerID, 1);
-				var numFacists = (players.length - 1) / 2 - 1;
-				for (var i = 0; i < numFacists; i++)
+				if (currentState = GameState.INIT)
 				{
-					var newID = getRandomInt(playersWithoutRoles.length);
-					facistsIDs.push(players.indexOf(playersWithoutRoles[newID]));
-					playersWithoutRoles.splice(newID, 1);
-				}
-				console.log("Hitler is " + players[hitlerID].displayName + ", facists IDs are " + facistsIDs.join(', '));
-				if (facistsIDs.length != 1)
-				{
-					players[hitlerID].send("You're Hitler, " + players[hitlerID].displayName + "!");
+					playersWithoutRoles = players.slice();
+					hitlerID = getRandomInt(players.length);
+					playersWithoutRoles.splice(hitlerID, 1);
+					var numFacists = (players.length - 1) / 2 - 1;
+					for (var i = 0; i < numFacists; i++)
+					{
+						var newID = getRandomInt(playersWithoutRoles.length);
+						facistsIDs.push(players.indexOf(playersWithoutRoles[newID]));
+						playersWithoutRoles.splice(newID, 1);
+					}
+					// console.log("Hitler is " + players[hitlerID].displayName + ", facists IDs are " + facistsIDs.join(', '));
+					if (facistsIDs.length != 1)
+					{
+						players[hitlerID].send("You're Hitler, " + players[hitlerID].displayName + "!");
+					}
+					else
+					{
+						players[hitlerID].send("You're Hitler, " + players[hitlerID].displayName + "! The facist is " + players[facistsIDs[0]].displayName);
+					}
+					for (var i = 0; i < facistsIDs.length; i++)
+					{
+						var current = players[facistsIDs[i]];
+						var toSend = "You're a Facist, " + current.displayName + "! Hitler is " + players[hitlerID].displayName;
+						if (facistsIDs.length > 1)
+						{
+							toSend += ", and the other facists are ";
+							var others = players.filter((a, b) => facistsIDs.indexOf(b) >= 0).splice(i, 1);
+							for (var j = 0; j < others.length; j++) {
+								toSend += others[j].displayName + ", ";
+							}
+						}
+						current.send(toSend);
+					}
+					for (var i = 0; i < playersWithoutRoles.length; i++) {
+						playersWithoutRoles[i].send("You're a Liberal, " + playersWithoutRoles[i].displayName);
+					}
+
 				}
 				else
 				{
-					players[hitlerID].send("You're Hitler, " + players[hitlerID].displayName + "! The facist is " + players[facistsIDs[0]].displayName);
-				}
-				for (var i = 0; i < facistsIDs.length; i++)
-				{
-					var current = players[facistsIDs[i]];
-					var toSend = "You're a Facist, " + current.displayName + "! Hitler is " + players[hitlerID].displayName;
-					if (facistsIDs.length > 1)
-					{
-						toSend += ", and the other facists are ";
-						var others = players.filter((a, b) => facistsIDs.indexOf(b) >= 0).splice(i, 1);
-						for (var j = 0; j < others.length; j++) {
-							toSend += others[j].displayName + ", ";
-						}
-					}
-					current.send(toSend);
-				}
-				for (var i = 0; i < playersWithoutRoles.length; i++) {
-					playersWithoutRoles[i].send("You're a Liberal, " + playersWithoutRoles[i].displayName);
+					message.reply('Game in progress!');
 				}
 			default:
 				break;
@@ -118,15 +134,24 @@ async function gotMessage(message)
 	}
 	else // Game actions
 	{
-		if (!players.includes(member))
-		{
-			players.push(member);
-			message.reply('Hi 😀\nThere are ' + players.length + ' players.');
-			saySomething(member.displayName + " joined the game!");
-		}
-		else
-		{
-			message.reply("You're already in the game!")
+		switch (currentState) {
+			case GameState.INIT:
+				if (!players.includes(member))
+				{
+					players.push(member);
+					message.reply('Hi 😀\nThere are ' + players.length + ' players.');
+					saySomething(member.displayName + " joined the game!");
+				}
+				else
+				{
+					message.reply("You're already in the game!")
+				}
+				break;
+			case expression:
+
+				break;
+			default:
+
 		}
 	}
 }
@@ -134,6 +159,29 @@ async function gotMessage(message)
 function gotReaction(reaction, user)
 {
 	reaction.message.reply('You reacted!');
+}
+
+function gameLogic(nextState)
+{
+	currentState = nextState;
+	switch (nextState) {
+		case GameState.INIT:
+			hitlerID = -1;
+			facistsIDs = [];
+			players = [];
+		case GameState.NOMINATE_CHANCELLOR:
+
+		case expression:
+
+			break;
+		default:
+
+	}
+}
+
+function printGameState()
+{
+
 }
 
 function saySomething(text)
