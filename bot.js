@@ -139,22 +139,22 @@ async function gotMessage(message)
 			case "end":
 				var toSend = 'The players were: \n'
 				for(var i = 0; i < players.length; i++) {
-					toSend += players[i].displayName + ", a ";
+					toSend += players[i].displayName + ", ";
 					if (i == hitlerID)
 					{
-						toSend += "Hitler\n";
+						toSend += "was Hitler\n";
 					}
 					else if (facistsIDs.indexOf(i) >= 0)
 					{
-						toSend += "Facist\n";
+						toSend += "a Facist\n";
 					}
 					else
 					{
-						toSend += "Liberal\n";
+						toSend += "a Liberal\n";
 					}
 				}
-				message.reply(toSend);
-				saySomething("Goodbye everyone!");
+				message.reply(toSend + " Thank you for playing Secret Hitler, Goodbye!");
+				saySomething(toSend + " Thank you for playing Secret Hitler, Goodbye!");
 				gameLogic(GameState.INIT)
 				break;
 			default:
