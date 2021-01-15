@@ -135,11 +135,26 @@ async function gotMessage(message)
 				{
 					message.reply('Game in progress!');
 				}
-				case "end":
-				message.reply('The players are: ')	
+				break;
+			case "end":
+				var toSend = 'The players were: \n'
 				for(var i = 0; i < players.length; i++) {
-					message.reply(players[i].displayName)
+					toSend += players[i].displayName + ", a ";
+					if (i == hitlerID)
+					{
+						toSend += "Hitler\n";
+					}
+					else if (facistsIDs.indexOf(i) >= 0)
+					{
+						toSend += "Facist\n";
+					}
+					else
+					{
+						toSend += "Liberal\n";
+					}
 				}
+				message.reply(toSend);
+				saySomething("Goodbye everyone!");
 				gameLogic(GameState.INIT)
 				break;
 			default:
