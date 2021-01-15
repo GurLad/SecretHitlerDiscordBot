@@ -12,6 +12,8 @@ GameState = {
 	KILL: 6
 }
 
+const MAX_FACIST = 6;
+const MAX_LIBERAL = 5;
 
 var channelVoice;
 var channelText;
@@ -28,8 +30,10 @@ var voices = [ "David", "Hazel", "Zira" ];
 var players = [];
 var hitlerID = -1;
 var facistsIDs = [];
-var numLiberal = 0;
-var numFacist = 0;
+var currentPresidentID = -1;
+var currentChancellorID = -1;
+var numLiberal = 3;
+var numFacist = 2;
 var currentState = GameState.INIT;
 
 
@@ -129,7 +133,8 @@ async function gotMessage(message)
 					for (var i = 0; i < playersWithoutRoles.length; i++) {
 						playersWithoutRoles[i].send("You are a Liberal, " + playersWithoutRoles[i].displayName);
 					}
-
+					currentPresidentID = getRandomInt(players.length);
+					gameLogic(GameState.NOMINATE_CHANCELLOR);
 				}
 				else
 				{
@@ -137,24 +142,6 @@ async function gotMessage(message)
 				}
 				break;
 			case "end":
-				var toSend = 'The players were: \n'
-				for(var i = 0; i < players.length; i++) {
-					toSend += players[i].displayName + ", ";
-					if (i == hitlerID)
-					{
-						toSend += "was Hitler\n";
-					}
-					else if (facistsIDs.indexOf(i) >= 0)
-					{
-						toSend += "a Facist\n";
-					}
-					else
-					{
-						toSend += "a Liberal\n";
-					}
-				}
-				message.reply(toSend + " Thank you for playing Secret Hitler, Goodbye!");
-				saySomething(toSend + " Thank you for playing Secret Hitler, Goodbye!");
 				gameLogic(GameState.INIT)
 				break;
 			default:
@@ -195,11 +182,30 @@ function gameLogic(nextState)
 	currentState = nextState;
 	switch (nextState) {
 		case GameState.INIT:
+			var toSend = 'The players were: \n'
+			for (var i = 0; i < players.length; i++)
+			{
+				toSend += players[i].displayName + ", ";
+				if (i == hitlerID)
+				{
+					toSend += "was Hitler\n";
+				}
+				else if (facistsIDs.indexOf(i) >= 0)
+				{
+					toSend += "a Facist\n";
+				}
+				else
+				{
+					toSend += "a Liberal\n";
+				}
+			}
+			sayAndPrint(toSend + "Thank you for playing Secret Hitler, Goodbye!");
 			hitlerID = -1;
 			facistsIDs = [];
 			players = [];
 		case GameState.NOMINATE_CHANCELLOR:
-
+			printGameState();
+			sayAndPrint(players[currentPresidentID].displayName + ", nominate a chancellor.");
 		case expression:
 
 			break;
@@ -210,7 +216,18 @@ function gameLogic(nextState)
 
 function printGameState()
 {
-
+	var empty = '◻';
+	var liberal = '🕊️';
+	var facist = '💀';
+	var toSend = 'Game state:\n';
+	for (var i = 0; i < MAX_LIBERAL; i++) {
+		toSend += (numLiberal > i ? liberal : empty) + ' ';
+	}
+	toSend += '\n';
+	for (var i = 0; i < MAX_FACIST; i++) {
+		toSend += (numFacist > i ? facist : empty) + ' ';
+	}
+	channelText.send(toSend);
 }
 
 function saySomething(text)
@@ -230,6 +247,12 @@ function saySomething(text)
 			connection.play(soundPath);
         }
     });
+}
+
+function sayAndPrint(text)
+{
+	channelText.send(text);
+	saySomething(text);
 }
 
 function getRandomInt(max) {
