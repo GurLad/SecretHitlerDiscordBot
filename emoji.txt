@@ -5,6 +5,10 @@ ballot box: 🗳️
 yes: 👍
 no: 👎
 
+scroll: 📜
+scales: ⚖️
+coffin: ⚰️
+
 #️⃣ Keycap Number Sign
 *️⃣ Keycap Asterisk
 0️⃣ Keycap Digit Zero
