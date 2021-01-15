@@ -5,6 +5,8 @@ require('dotenv').config();
 
 var channel;
 var guild;
+var connection;
+
 var players = [];
 var voice = null;
 var voicePrefix = "Microsoft ";
@@ -12,6 +14,9 @@ var voiceSuffix = " Desktop";
 var prefix = "!";
 
 var voices = [ "David", "Hazel", "Zira" ];
+
+var hitlerID = -1;
+var facistsIDs = [];
 
 
 
@@ -25,7 +30,7 @@ client.on('messageReactionAdd', gotReaction);
 
 client.login(process.env.DISCORD_KEY);
 
-function gotMessage(message)
+async function gotMessage(message)
 {
 	if (message.author.id === client.user.id)
 	{
@@ -39,9 +44,10 @@ function gotMessage(message)
 		if (!message.guild.me.voice.channel)
 		{
 			// Joining the channel and creating a VoiceConnection.
-			message.member.voice.channel.join();
+			await message.member.voice.channel.join();
 		}
 		channel = message.guild.me.voice.channel;
+		connection = await channel.join();
 		guild = message.guild;
 	}
 	var member = guild.member(message.author);
@@ -69,6 +75,43 @@ function gotMessage(message)
 			case 'listVoices':
 				message.reply(voices.join());
 				break;
+			case 'start':
+				playersWithoutRoles = players.slice();
+				hitlerID = getRandomInt(players.length);
+				playersWithoutRoles.splice(hitlerID, 1);
+				var numFacists = (players.length - 1) / 2 - 1;
+				for (var i = 0; i < numFacists; i++)
+				{
+					var newID = getRandomInt(playersWithoutRoles.length);
+					facistsIDs.push(players.indexOf(playersWithoutRoles[newID]));
+					playersWithoutRoles.splice(newID, 1);
+				}
+				console.log("Hitler is " + players[hitlerID].displayName + ", facists IDs are " + facistsIDs.join(', '));
+				if (facistsIDs.length != 1)
+				{
+					players[hitlerID].send("You're Hitler, " + players[hitlerID].displayName + "!");
+				}
+				else
+				{
+					players[hitlerID].send("You're Hitler, " + players[hitlerID].displayName + "! The facist is " + players[facistsIDs[0]].displayName);
+				}
+				for (var i = 0; i < facistsIDs.length; i++)
+				{
+					var current = players[facistsIDs[i]];
+					var toSend = "You're a Facist, " + current.displayName + "! Hitler is " + players[hitlerID].displayName;
+					if (facistsIDs.length > 1)
+					{
+						toSend += ", and the other facists are ";
+						var others = players.filter((a, b) => facistsIDs.indexOf(b) >= 0).splice(i, 1);
+						for (var j = 0; j < others.length; j++) {
+							toSend += others[j].displayName + ", ";
+						}
+					}
+					current.send(toSend);
+				}
+				for (var i = 0; i < playersWithoutRoles.length; i++) {
+					playersWithoutRoles[i].send("You're a Liberal, " + playersWithoutRoles[i].displayName);
+				}
 			default:
 				break;
 		}
@@ -102,11 +145,16 @@ function saySomething(text)
             console.error(err);
             return;
         }else{
-            channel.join().then((connection) => {
-                connection.play(soundPath);
-            }).catch((err) => {
-                console.error(err);
-            });
+            // channel.join().then((connection) => {
+            //     connection.play(soundPath);
+            // }).catch((err) => {
+            //     console.error(err);
+            // });
+			connection.play(soundPath);
         }
     });
+}
+
+function getRandomInt(max) {
+  return Math.floor(Math.random() * Math.floor(max));
 }
