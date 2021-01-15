@@ -9,8 +9,9 @@ var players = [];
 var voice = null;
 var voicePrefix = "Microsoft ";
 var voiceSuffix = " Desktop";
+var prefix = "!";
 
-let voices = [ "David", "Hazel", "Zira" ];
+var voices = [ "David", "Hazel", "Zira" ];
 
 
 
@@ -24,59 +25,66 @@ client.on('messageReactionAdd', gotReaction);
 
 client.login(process.env.DISCORD_KEY);
 
-function gotMessage(msg) 
+function gotMessage(message)
 {
-	if (msg.author.id === client.user.id)
+	if (message.author.id === client.user.id)
 	{
 		return;
 	}
 	if (channel == null)
 	{
 		// Checking if the message author is in a voice channel.
-		if (!msg.member.voice.channel) return msg.reply("You must be in a voice channel.");
+		if (!message.member.voice.channel) return message.reply("You must be in a voice channel.");
 		// Checking if the bot is in a voice channel.
-		if (!msg.guild.me.voice.channel)
+		if (!message.guild.me.voice.channel)
 		{
 			// Joining the channel and creating a VoiceConnection.
-			msg.member.voice.channel.join();
+			message.member.voice.channel.join();
 		}
-		channel = msg.guild.me.voice.channel;
-		guild = msg.guild;
+		channel = message.guild.me.voice.channel;
+		guild = message.guild;
 	}
-	var member = guild.member(msg.author);
-	if (msg.content.includes('!say '))
+	var member = guild.member(message.author);
+	// Commands
+	if (message.content.startsWith(prefix))
 	{
-		saySomething(member.displayName + " said " + msg.content.replace('!say', ''));
-		return;
+		const args = message.content.slice(prefix.length).trim().split(/ +/);
+		const command = args.shift().toLowerCase();
+		switch (command) {
+			case 'say':
+				saySomething(member.displayName + " said " + args.join(' '));
+				break;
+			case 'setVoice':
+				var input = args[0];
+				if (voices.includes(input))
+				{
+					voice = voicePrefix + input + voiceSuffix;
+					saySomething("Hello there! I'm your new narrator!");
+				}
+				else
+				{
+					message.reply('Invalid voice!');
+				}
+				break;
+			case 'listVoices':
+				message.reply(voices.join());
+				break;
+			default:
+				break;
+		}
 	}
-	else if (msg.content.includes('!setVoice '))
+	else // Game actions
 	{
-		var input = msg.content.replace('!setVoice ', '')
-		if (voices.includes(input))
+		if (!players.includes(member))
 		{
-			voice = voicePrefix + input + voiceSuffix;
-			saySomething("Hello there! I'm your new narrator!");
+			players.push(member);
+			message.reply('Hi 😀\nThere are ' + players.length + ' players.');
+			saySomething(member.displayName + " joined the game!");
 		}
 		else
 		{
-			msg.reply('Invalid voice!');
+			message.reply("You're already in the game!")
 		}
-		return;
-	}
-	else if (msg.content.includes('!listVoices'))
-	{
-		msg.reply(voices.join());
-		return;
-	}
-	if (!players.includes(member))
-	{
-		players.push(member);
-		msg.reply('Hi 😀\nThere are ' + players.length + ' players.');
-		saySomething(member.displayName + " joined the game!");
-	}
-	else
-	{
-		msg.reply("You're already in the game!")
 	}
 }
 
