@@ -153,7 +153,6 @@ async function gotMessage(message) {
 							message.react('👍');
 							message.react('👎');
 							gameLogic(GameState.PLAYER_VOTE);
-							saySomething(players[i].displayName + ' is Chancellor')
 							return;
 						}
 					}
@@ -233,7 +232,11 @@ function gameLogic(nextState) {
 		case GameState.PLAYER_VOTE:
 			currentVoters = [];
 			currentVoteBalance = 0;
-			saySomething('Everyone, vote YA or NIEN for the ' + players[currentPresidentID].displayName + ' and ' + players[currentChancellorID].displayName + ' goverment.');
+			if (currentPresidentID == currentChancellorID) {
+				sayAndPrint('Everyone, vote Yes or No for the ' + players[currentPresidentID].displayName + ' goverment.');
+			} else {
+				sayAndPrint('Everyone, vote Yes or No for the ' + players[currentPresidentID].displayName + ' and ' + players[currentChancellorID].displayName + ' goverment.');
+			}
 			break;
 		case GameState.PRESIDENT_DISCARD:
 			saySomething(players[currentPresidentID].displayName + ', choose a card to discard.');
