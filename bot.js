@@ -36,6 +36,9 @@ var numLiberal = 3;
 var numFacist = 2;
 var currentState = GameState.INIT;
 
+var currentVoteBalance = 0;
+var currentVoters = [];
+
 
 
 client.once('ready', () => {
@@ -118,6 +121,7 @@ async function gotMessage(message) {
 					for (var i = 0; i < playersWithoutRoles.length; i++) {
 						playersWithoutRoles[i].send("You are a Liberal, " + playersWithoutRoles[i].displayName);
 					}
+					currentPresidentID = getRandomInt(players.length);
 					gameLogic(GameState.NOMINATE_CHANCELLOR);
 				} else {
 					message.reply('Game in progress!');
@@ -142,15 +146,21 @@ async function gotMessage(message) {
 				}
 				break;
 			case GameState.NOMINATE_CHANCELLOR:
-				for (var i = 0; i < players.length; i++) {
-					if (players[i].displayName.toLowerCase() === message.content.toLowerCase()) {
-						currentChancellorID = i;
-						gameLogic(GameState.PLAYER_VOTE);
-						saySomething(players[i].displayName + ' is Chancellor')
-						return;
+				if (member == players[currentPresidentID]) {
+					for (var i = 0; i < players.length; i++) {
+						if (players[i].displayName.toLowerCase() === message.content.toLowerCase()) {
+							currentChancellorID = i;
+							message.react('👍');
+							message.react('👎');
+							gameLogic(GameState.PLAYER_VOTE);
+							saySomething(players[i].displayName + ' is Chancellor')
+							return;
+						}
 					}
+					message.reply("Please choose a valid player (use their display name).");
+				} else {
+					sayAndPrint("Nice try, " + member.displayName);
 				}
-				message.reply("Please choose a valid player (use their display name).");
 				break;
 			default:
 
@@ -159,7 +169,39 @@ async function gotMessage(message) {
 }
 
 function gotReaction(reaction, user) {
-	reaction.message.reply('You reacted!');
+	if (user.id == client.user.id) {
+		return;
+	}
+	switch (currentState) {
+		case GameState.PLAYER_VOTE:
+			content = reaction.emoji.name;
+			if (content !== '👎' && content !== '👍') {
+				return;
+			}
+			for (var i = 0; i < players.length; i++) {
+				if (players[i].id == user.id) {
+					if (currentVoters.indexOf(players[i]) < 0) {
+						currentVoters.push(players[i]);
+						if (content === '👍') {
+							currentVoteBalance++;
+						} else {
+							currentVoteBalance--;
+						}
+					}
+				}
+			}
+			console.log("Voters: " + currentVoters.length);
+			if (currentVoters.length == players.length) {
+				if (currentVoteBalance > 0) {
+					gameLogic(GameState.PRESIDENT_DISCARD);
+				} else {
+					gameLogic(GameState.NOMINATE_CHANCELLOR);
+				}
+			}
+			break;
+		default:
+			break;
+	}
 }
 
 function gameLogic(nextState) {
@@ -183,10 +225,18 @@ function gameLogic(nextState) {
 			players = [];
 			break;
 		case GameState.NOMINATE_CHANCELLOR:
-			currentPresidentID = getRandomInt(players.length);
+			currentPresidentID++;
+			currentPresidentID %= players.length;
 			printGameState();
 			sayAndPrint(players[currentPresidentID].displayName + ", nominate a chancellor.");
 			break;
+		case GameState.PLAYER_VOTE:
+			currentVoters = [];
+			currentVoteBalance = 0;
+			saySomething('Everyone, vote YA or NIEN for the ' + players[currentPresidentID].displayName + ' and ' + players[currentChancellorID].displayName + ' goverment.');
+			break;
+		case GameState.PRESIDENT_DISCARD:
+			saySomething(players[currentPresidentID].displayName + ', choose a card to discard.');
 		default:
 			break;
 	}
