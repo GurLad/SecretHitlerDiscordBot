@@ -163,8 +163,16 @@ async function gotMessage(message)
 					message.reply("You are already in the game!")
 				}
 				break;
-			case expression:
-
+			case GameState.NOMINATE_CHANCELLOR:
+				for (var i = 0; i < players.length; i++) {
+					if (players[i].displayName.toLowerCase() === message.content.toLowerCase())
+					{
+						currentChancellorID = i;
+						gameLogic(GameState.PRESIDENT_DISCARD);
+						return;
+					}
+				}
+				message.reply("Please choose a valid player (use their display name).");
 				break;
 			default:
 
@@ -206,11 +214,8 @@ function gameLogic(nextState)
 		case GameState.NOMINATE_CHANCELLOR:
 			printGameState();
 			sayAndPrint(players[currentPresidentID].displayName + ", nominate a chancellor.");
-		case expression:
-
-			break;
 		default:
-
+			break;
 	}
 }
 
