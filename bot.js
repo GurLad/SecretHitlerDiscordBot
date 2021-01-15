@@ -133,7 +133,6 @@ async function gotMessage(message)
 					for (var i = 0; i < playersWithoutRoles.length; i++) {
 						playersWithoutRoles[i].send("You are a Liberal, " + playersWithoutRoles[i].displayName);
 					}
-					currentPresidentID = getRandomInt(players.length);
 					gameLogic(GameState.NOMINATE_CHANCELLOR);
 				}
 				else
@@ -168,7 +167,8 @@ async function gotMessage(message)
 					if (players[i].displayName.toLowerCase() === message.content.toLowerCase())
 					{
 						currentChancellorID = i;
-						gameLogic(GameState.PRESIDENT_DISCARD);
+						gameLogic(GameState.PLAYER_VOTE);
+						saySomething(players[i].displayName + ' is Chancellor')
 						return;
 					}
 				}
@@ -211,9 +211,12 @@ function gameLogic(nextState)
 			hitlerID = -1;
 			facistsIDs = [];
 			players = [];
+			break;
 		case GameState.NOMINATE_CHANCELLOR:
+			currentPresidentID = getRandomInt(players.length);
 			printGameState();
 			sayAndPrint(players[currentPresidentID].displayName + ", nominate a chancellor.");
+			break;
 		default:
 			break;
 	}
