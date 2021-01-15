@@ -25,7 +25,7 @@ var voicePrefix = "Microsoft ";
 var voiceSuffix = " Desktop";
 var prefix = "!";
 
-var voices = [ "David", "Hazel", "Zira" ];
+var voices = ["David", "Hazel", "Zira"];
 
 var players = [];
 var hitlerID = -1;
@@ -48,19 +48,15 @@ client.on('messageReactionAdd', gotReaction);
 
 client.login(process.env.DISCORD_KEY);
 
-async function gotMessage(message)
-{
-	if (message.author.id === client.user.id)
-	{
+async function gotMessage(message) {
+	if (message.author.id === client.user.id) {
 		return;
 	}
-	if (channelVoice == null)
-	{
+	if (channelVoice == null) {
 		// Checking if the message author is in a voice channel.
 		if (!message.member.voice.channel) return message.reply("You must be in a voice channel.");
 		// Checking if the bot is in a voice channel.
-		if (!message.guild.me.voice.channel)
-		{
+		if (!message.guild.me.voice.channel) {
 			// Joining the channel and creating a VoiceConnection.
 			await message.member.voice.channel.join();
 		}
@@ -71,8 +67,7 @@ async function gotMessage(message)
 	}
 	var member = guild.member(message.author);
 	// Commands
-	if (message.content.startsWith(prefix))
-	{
+	if (message.content.startsWith(prefix)) {
 		const args = message.content.slice(prefix.length).trim().split(/ +/);
 		const command = args.shift().toLowerCase();
 		switch (command) {
@@ -81,13 +76,10 @@ async function gotMessage(message)
 				break;
 			case 'setVoice':
 				var input = args[0];
-				if (voices.includes(input))
-				{
+				if (voices.includes(input)) {
 					voice = voicePrefix + input + voiceSuffix;
 					saySomething("Hello there! I'm your new narrator!");
-				}
-				else
-				{
+				} else {
 					message.reply('Invalid voice!');
 				}
 				break;
@@ -95,33 +87,26 @@ async function gotMessage(message)
 				message.reply(voices.join());
 				break;
 			case 'start':
-				if (currentState = GameState.INIT)
-				{
+				if (currentState = GameState.INIT) {
 					playersWithoutRoles = players.slice();
 					hitlerID = getRandomInt(players.length);
 					playersWithoutRoles.splice(hitlerID, 1);
 					var numFacists = (players.length - 1) / 2 - 1;
-					for (var i = 0; i < numFacists; i++)
-					{
+					for (var i = 0; i < numFacists; i++) {
 						var newID = getRandomInt(playersWithoutRoles.length);
 						facistsIDs.push(players.indexOf(playersWithoutRoles[newID]));
 						playersWithoutRoles.splice(newID, 1);
 					}
 					// console.log("Hitler is " + players[hitlerID].displayName + ", facists IDs are " + facistsIDs.join(', '));
-					if (facistsIDs.length != 1)
-					{
+					if (facistsIDs.length != 1) {
 						players[hitlerID].send("You are Hitler, " + players[hitlerID].displayName + "!");
-					}
-					else
-					{
+					} else {
 						players[hitlerID].send("You are Hitler, " + players[hitlerID].displayName + "!\n The facist is " + players[facistsIDs[0]].displayName);
 					}
-					for (var i = 0; i < facistsIDs.length; i++)
-					{
+					for (var i = 0; i < facistsIDs.length; i++) {
 						var current = players[facistsIDs[i]];
 						var toSend = "You are a Facist, " + current.displayName + "!\n Hitler is " + players[hitlerID].displayName;
-						if (facistsIDs.length > 1)
-						{
+						if (facistsIDs.length > 1) {
 							toSend += ", and the other facists are ";
 							var others = players.filter((a, b) => facistsIDs.indexOf(b) >= 0).splice(i, 1);
 							for (var j = 0; j < others.length; j++) {
@@ -134,9 +119,7 @@ async function gotMessage(message)
 						playersWithoutRoles[i].send("You are a Liberal, " + playersWithoutRoles[i].displayName);
 					}
 					gameLogic(GameState.NOMINATE_CHANCELLOR);
-				}
-				else
-				{
+				} else {
 					message.reply('Game in progress!');
 				}
 				break;
@@ -146,26 +129,21 @@ async function gotMessage(message)
 			default:
 				break;
 		}
-	}
-	else // Game actions
+	} else // Game actions
 	{
 		switch (currentState) {
 			case GameState.INIT:
-				if (!players.includes(member))
-				{
+				if (!players.includes(member)) {
 					players.push(member);
 					message.reply('Hi 😀\nThere are ' + players.length + ' players.');
 					saySomething(member.displayName + " joined the game!");
-				}
-				else
-				{
+				} else {
 					message.reply("You are already in the game!")
 				}
 				break;
 			case GameState.NOMINATE_CHANCELLOR:
 				for (var i = 0; i < players.length; i++) {
-					if (players[i].displayName.toLowerCase() === message.content.toLowerCase())
-					{
+					if (players[i].displayName.toLowerCase() === message.content.toLowerCase()) {
 						currentChancellorID = i;
 						gameLogic(GameState.PLAYER_VOTE);
 						saySomething(players[i].displayName + ' is Chancellor')
@@ -180,30 +158,22 @@ async function gotMessage(message)
 	}
 }
 
-function gotReaction(reaction, user)
-{
+function gotReaction(reaction, user) {
 	reaction.message.reply('You reacted!');
 }
 
-function gameLogic(nextState)
-{
+function gameLogic(nextState) {
 	currentState = nextState;
 	switch (nextState) {
 		case GameState.INIT:
 			var toSend = 'The players were: \n'
-			for (var i = 0; i < players.length; i++)
-			{
+			for (var i = 0; i < players.length; i++) {
 				toSend += players[i].displayName + ", ";
-				if (i == hitlerID)
-				{
+				if (i == hitlerID) {
 					toSend += "was Hitler\n";
-				}
-				else if (facistsIDs.indexOf(i) >= 0)
-				{
+				} else if (facistsIDs.indexOf(i) >= 0) {
 					toSend += "a Facist\n";
-				}
-				else
-				{
+				} else {
 					toSend += "a Liberal\n";
 				}
 			}
@@ -222,8 +192,7 @@ function gameLogic(nextState)
 	}
 }
 
-function printGameState()
-{
+function printGameState() {
 	var empty = '◻';
 	var liberal = '🕊️';
 	var facist = '💀';
@@ -238,31 +207,29 @@ function printGameState()
 	channelText.send(toSend);
 }
 
-function saySomething(text)
-{
-    const timestamp = new Date().getTime();
-    const soundPath = `./temp/${timestamp}.wav`;
-    say.export(text, voice, 1, soundPath, (err) => {
-        if (err) {
-            console.error(err);
-            return;
-        }else{
-            // channel.join().then((connection) => {
-            //     connection.play(soundPath);
-            // }).catch((err) => {
-            //     console.error(err);
-            // });
+function saySomething(text) {
+	const timestamp = new Date().getTime();
+	const soundPath = `./temp/${timestamp}.wav`;
+	say.export(text, voice, 1, soundPath, (err) => {
+		if (err) {
+			console.error(err);
+			return;
+		} else {
+			// channel.join().then((connection) => {
+			//     connection.play(soundPath);
+			// }).catch((err) => {
+			//     console.error(err);
+			// });
 			connection.play(soundPath);
-        }
-    });
+		}
+	});
 }
 
-function sayAndPrint(text)
-{
+function sayAndPrint(text) {
 	channelText.send(text);
 	saySomething(text);
 }
 
 function getRandomInt(max) {
-  return Math.floor(Math.random() * Math.floor(max));
+	return Math.floor(Math.random() * Math.floor(max));
 }
