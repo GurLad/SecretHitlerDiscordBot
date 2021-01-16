@@ -32,14 +32,47 @@ var hitlerID = -1;
 var facistsIDs = [];
 var currentPresidentID = -1;
 var currentChancellorID = -1;
-var numLiberal = 3;
-var numFacist = 2;
+var numLiberal = 0;
+var numFacist = 0;
 var currentState = GameState.INIT;
 
 var currentVoteBalance = 0;
 var currentVoters = [];
 
+var cardsDeck = []
+var cardsDrawn = []
+var cardsDiscards = []
 
+var numToEmoji = {
+	0: "0️⃣",
+	1: "1️⃣",
+	2: "2️⃣",
+	3: "3️⃣",
+	4: "4️⃣",
+	5: "5️⃣",
+	6: "6️⃣",
+	7: "7️⃣",
+	8: "8️⃣",
+	9: "9️⃣",
+	10: "🔟"
+}
+
+var numFromEmoji = {
+	"0️⃣": 0,
+	"1️⃣": 1,
+	"2️⃣": 2,
+	"3️⃣": 3,
+	"4️⃣": 4,
+	"5️⃣": 5,
+	"6️⃣": 6,
+	"7️⃣": 7,
+	"8️⃣": 8,
+	"9️⃣": 9,
+	"🔟": 10
+}
+
+const cardsLiberal = 6
+const cardsFascist = 11
 
 client.once('ready', () => {
 	console.log('Ready!');
@@ -90,7 +123,15 @@ async function gotMessage(message) {
 				message.reply(voices.join());
 				break;
 			case 'start':
-				if (currentState = GameState.INIT) {
+				if (currentState === GameState.INIT) {
+					for (i = 0; i < cardsLiberal; i++) {
+						cardsDeck.push('l')
+					}
+					for (i = 0; i < cardsFascist; i++) {
+						cardsDeck.push('f')
+					}
+					shuffleArray(cardsDeck);
+
 					playersWithoutRoles = players.slice();
 					hitlerID = getRandomInt(players.length);
 					playersWithoutRoles.splice(hitlerID, 1);
@@ -133,8 +174,8 @@ async function gotMessage(message) {
 			default:
 				break;
 		}
-	} else // Game actions
-	{
+	} else {
+		// Game Actions
 		switch (currentState) {
 			case GameState.INIT:
 				if (!players.includes(member)) {
@@ -198,6 +239,39 @@ function gotReaction(reaction, user) {
 				}
 			}
 			break;
+		case GameState.PRESIDENT_DISCARD:
+			content = reaction.emoji.name;
+			if (content !== numToEmoji[0] && content !== numToEmoji[1] && content !== numToEmoji[2]) {
+				return;
+			}
+			for (var i = 0; i < players.length; i++) {
+				if (players[i].id == user.id) {
+					if (i == currentPresidentID) {
+						cardsDiscards = cardsDrawn.splice(numFromEmoji[content], 1)
+						gameLogic(GameState.CHANCELLOR_DISCARD);
+					}
+				}
+			}
+			break;
+		case GameState.CHANCELLOR_DISCARD:
+			content = reaction.emoji.name;
+			if (content !== numToEmoji[0] && content !== numToEmoji[1]) {
+				return;
+			}
+			for (var i = 0; i < players.length; i++) {
+				if (players[i].id == user.id) {
+					if (i == currentChancellorID) {
+						cardsDiscards = cardsDrawn.splice(numFromEmoji[content], 1);
+						if (cardsDrawn[0] == 'l') {
+							numLiberal++;
+						} else {
+							numFacist++;
+						}
+						gameLogic(GameState.NOMINATE_CHANCELLOR);
+					}
+				}
+			}
+			break;
 		default:
 			break;
 	}
@@ -217,11 +291,15 @@ function gameLogic(nextState) {
 				} else {
 					toSend += "a Liberal\n";
 				}
+
 			}
 			sayAndPrint(toSend + "Thank you for playing Secret Hitler, Goodbye!");
 			hitlerID = -1;
 			facistsIDs = [];
 			players = [];
+			cardsDeck = [];
+			cardsDiscards = [];
+			cardsDrawn = [];
 			break;
 		case GameState.NOMINATE_CHANCELLOR:
 			currentPresidentID++;
@@ -240,6 +318,14 @@ function gameLogic(nextState) {
 			break;
 		case GameState.PRESIDENT_DISCARD:
 			saySomething(players[currentPresidentID].displayName + ', choose a card to discard.');
+			cardsDrawn = cardsDeck.splice(0, 3)
+			printCardsToDiscard(currentPresidentID)
+			break;
+		case GameState.CHANCELLOR_DISCARD:
+			saySomething(players[currentChancellorID].displayName + ', choose a card to discard.');
+			printCardsToDiscard(currentChancellorID)
+
+			break;
 		default:
 			break;
 	}
@@ -285,4 +371,26 @@ function sayAndPrint(text) {
 
 function getRandomInt(max) {
 	return Math.floor(Math.random() * Math.floor(max));
+}
+
+function shuffleArray(array) {
+	for (let i = array.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
+		[array[i], array[j]] = [array[j], array[i]];
+	}
+}
+
+function printCardsToDiscard(index) {
+	var toSend = "Choose a card to discard: \n"
+	for (i = 0; i < cardsDrawn.length; i++) {
+		toSend += numToEmoji[i] + ": " + (cardsDrawn[i] == "l" ? "🕊️" : "💀") + "\n";
+	}
+
+	players[index].send(toSend).then(message => {
+		for (i = 0; i < cardsDrawn.length; i++) {
+			message.react(numToEmoji[i])
+		}
+	})
+
+
 }
