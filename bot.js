@@ -23,7 +23,7 @@ var connection;
 var voice = null;
 var voicePrefix = "Microsoft ";
 var voiceSuffix = " Desktop";
-var prefix = "!";
+var commandPrefix = "!";
 
 var voices = ["David", "Hazel", "Zira"];
 
@@ -106,8 +106,8 @@ async function gotMessage(message) {
 	}
 	var member = guild.member(message.author);
 	// Commands
-	if (message.content.startsWith(prefix)) {
-		const args = message.content.slice(prefix.length).trim().split(/ +/);
+	if (message.content.startsWith(commandPrefix)) {
+		const args = message.content.slice(commandPrefix.length).trim().split(/ +/);
 		const command = args.shift().toLowerCase();
 		switch (command) {
 			case 'say':
@@ -205,8 +205,42 @@ async function gotMessage(message) {
 					sayAndPrint("Nice try, " + member.displayName);
 				}
 				break;
-			default:
+			case GameState.KILL:
+				if (member == players[currentPresidentID]) {
+					for (var i = 0; i < players.length; i++) {
+						if (players[i].displayName.toLowerCase() === message.content.toLowerCase()) {
+							if (i == hitlerID) {
+								sayAndPrint("Liberals Won")
+								printGameState()
+								gameLogic(GameState.INIT)
+								return;
+							}
+							if (hitlerID > i) {
+								hitlerID--;
+							}
+							for (j = 0; j < facistsIDs.length; j++) {
+								if (facistsIDs[j] == i) {
+									facistsIDs = facistsIDs.splice(j, 1);
+									j--;
+								} else if (facistsIDs[j] > i) {
+									facistsIDs[j]--;
+								}
+							}
+							if (currentPresidentID > i) {
+								currentPresidentID--;
+							}
 
+							players.splice(i, 1);
+							gameLogic(GameState.NOMINATE_CHANCELLOR);
+							return;
+						}
+					}
+					message.reply("Please choose a valid player (use their display name).");
+				} else {
+					sayAndPrint("Nice try, " + member.displayName);
+				}
+				break;
+			default:
 		}
 	}
 }
@@ -250,7 +284,7 @@ function gotReaction(reaction, user) {
 			for (var i = 0; i < players.length; i++) {
 				if (players[i].id == user.id) {
 					if (i == currentPresidentID) {
-						cardsDiscards = cardsDrawn.splice(numFromEmoji[content], 1)
+						cardsDiscards.push(cardsDrawn.splice(numFromEmoji[content], 1));
 						gameLogic(GameState.CHANCELLOR_DISCARD);
 					}
 				}
@@ -264,11 +298,26 @@ function gotReaction(reaction, user) {
 			for (var i = 0; i < players.length; i++) {
 				if (players[i].id == user.id) {
 					if (i == currentChancellorID) {
-						cardsDiscards = cardsDrawn.splice(numFromEmoji[content], 1);
+						cardsDiscards.push(cardsDrawn.splice(numFromEmoji[content], 1));
 						if (cardsDrawn[0] == 'l') {
 							numLiberal++;
 						} else {
 							numFacist++;
+							if (numFacist == 3) {
+								var toSend = "Top three cards are: ";
+								for (i = 0; i < 3; i++) {
+									toSend += (cardsDeck[i] == "l" ? "🕊️" : "💀");
+									if (i < 2) {
+										toSend += ", "
+									}
+								}
+								saySomething(players[currentPresidentID].displayName + " view the top three cards of the deck")
+								players[currentPresidentID].send(toSend)
+							}
+							if (numFacist >= 4) {
+								gameLogic(GameState.KILL);
+								return;
+							}
 						}
 						gameLogic(GameState.NOMINATE_CHANCELLOR);
 					}
@@ -305,6 +354,18 @@ function gameLogic(nextState) {
 			cardsDrawn = [];
 			break;
 		case GameState.NOMINATE_CHANCELLOR:
+			if (numLiberal >= MAX_LIBERAL) {
+				sayAndPrint("Liberals Won")
+				printGameState()
+				gameLogic(GameState.INIT)
+				return;
+			}
+			if (numFacist >= MAX_FACIST) {
+				sayAndPrint("Facists Won")
+				printGameState()
+				gameLogic(GameState.INIT)
+				return;
+			}
 			currentPresidentID++;
 			currentPresidentID %= players.length;
 			printGameState();
@@ -320,14 +381,27 @@ function gameLogic(nextState) {
 			}
 			break;
 		case GameState.PRESIDENT_DISCARD:
+			if (numFacist >= 3 && currentChancellorID == hitlerID) {
+				sayAndPrint("Facists Won")
+				printGameState()
+				gameLogic(GameState.INIT)
+				return;
+			}
 			saySomething(players[currentPresidentID].displayName + ', choose a card to discard.');
+			console.log("cardsDiscards: " + cardsDiscards.length + "\n cardsDeck: " + cardsDeck.length)
+			if (cardsDeck.length < 3) {
+				shuffleArray(cardsDiscards)
+				cardsDeck = cardsDeck.concat(cardsDiscards);
+			}
 			cardsDrawn = cardsDeck.splice(0, 3)
 			printCardsToDiscard(currentPresidentID)
 			break;
 		case GameState.CHANCELLOR_DISCARD:
 			saySomething(players[currentChancellorID].displayName + ', choose a card to discard.');
 			printCardsToDiscard(currentChancellorID)
-
+			break;
+		case GameState.KILL:
+			sayAndPrint(players[currentPresidentID].displayName + ", choose a player to kill!")
 			break;
 		default:
 			break;
