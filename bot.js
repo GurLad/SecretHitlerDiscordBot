@@ -32,6 +32,9 @@ var hitlerID = -1;
 var facistsIDs = [];
 var currentPresidentID = -1;
 var currentChancellorID = -1;
+var previousPresidentID = -1;
+var previousChancellorID = -1;
+var numFails = 0;
 var numLiberal = 0;
 var numFacist = 0;
 var currentState = GameState.INIT;
@@ -44,31 +47,31 @@ var cardsDrawn = []
 var cardsDiscards = []
 
 var numToEmoji = {
-	0: "0️⃣",
-	1: "1️⃣",
-	2: "2️⃣",
-	3: "3️⃣",
-	4: "4️⃣",
-	5: "5️⃣",
-	6: "6️⃣",
-	7: "7️⃣",
-	8: "8️⃣",
-	9: "9️⃣",
-	10: "🔟"
+	0: "1️⃣",
+	1: "2️⃣",
+	2: "3️⃣",
+	// 3: "3️⃣",
+	// 4: "4️⃣",
+	// 5: "5️⃣",
+	// 6: "6️⃣",
+	// 7: "7️⃣",
+	// 8: "8️⃣",
+	// 9: "9️⃣",
+	// 10: "🔟"
 }
 
 var numFromEmoji = {
-	"0️⃣": 0,
-	"1️⃣": 1,
-	"2️⃣": 2,
-	"3️⃣": 3,
-	"4️⃣": 4,
-	"5️⃣": 5,
-	"6️⃣": 6,
-	"7️⃣": 7,
-	"8️⃣": 8,
-	"9️⃣": 9,
-	"🔟": 10
+	// "0️⃣": 0,
+	"1️⃣": 0,
+	"2️⃣": 1,
+	"3️⃣": 2,
+	// "4️⃣": 4,
+	// "5️⃣": 5,
+	// "6️⃣": 6,
+	// "7️⃣": 7,
+	// "8️⃣": 8,
+	// "9️⃣": 9,
+	// "🔟": 10
 }
 
 const cardsLiberal = 6
@@ -193,6 +196,10 @@ async function gotMessage(message) {
 				if (member == players[currentPresidentID]) {
 					for (var i = 0; i < players.length; i++) {
 						if (players[i].displayName.toLowerCase() === message.content.toLowerCase()) {
+							if (i == previousPresidentID || i == previousChancellorID) {
+								message.reply("You can't nominate people who were in the previous goverment.")
+								return;
+							}
 							currentChancellorID = i;
 							message.react('👍');
 							message.react('👎');
@@ -228,7 +235,18 @@ async function gotMessage(message) {
 							}
 							if (currentPresidentID > i) {
 								currentPresidentID--;
+								previousPresidentID--;
+							} else if (currentPresidentID == i) {
+								sayAndPrint("Why did you kill yourself, " + players[i].displayName + "?");
+								currentPresidentID--;
+								previousPresidentID = -1;
 							}
+							if (currentChancellorID > i) {
+								currentChancellorID--;
+							} else if (currentChancellorID == i) {
+								currentChancellorID = -1;
+							}
+							previousChancellorID = currentChancellorID;
 
 							players.splice(i, 1);
 							gameLogic(GameState.NOMINATE_CHANCELLOR);
@@ -270,8 +288,20 @@ function gotReaction(reaction, user) {
 			console.log("Voters: " + currentVoters.length);
 			if (currentVoters.length == players.length) {
 				if (currentVoteBalance > 0) {
+					numFails = 0;
 					gameLogic(GameState.PRESIDENT_DISCARD);
 				} else {
+					numFails++;
+					if (numFails >= 3) {
+						sayAndPrint("You failed to enact a goverment three times in a row. The top card was chosen.");
+						var topCard = drawTopCards(1);
+						if (topCard == 'l') {
+							numLiberal++;
+						} else {
+							numFacist++;
+						}
+						numFails = 0;
+					}
 					gameLogic(GameState.NOMINATE_CHANCELLOR);
 				}
 			}
@@ -299,20 +329,23 @@ function gotReaction(reaction, user) {
 				if (players[i].id == user.id) {
 					if (i == currentChancellorID) {
 						cardsDiscards.push(cardsDrawn.splice(numFromEmoji[content], 1));
+						previousPresidentID = currentPresidentID;
+						previousChancellorID = currentChancellorID;
 						if (cardsDrawn[0] == 'l') {
 							numLiberal++;
 						} else {
 							numFacist++;
 							if (numFacist == 3) {
+								validateDeck(3);
 								var toSend = "Top three cards are: ";
 								for (i = 0; i < 3; i++) {
 									toSend += (cardsDeck[i] == "l" ? "🕊️" : "💀");
 									if (i < 2) {
-										toSend += ", "
+										toSend += ", ";
 									}
 								}
-								saySomething(players[currentPresidentID].displayName + " view the top three cards of the deck")
-								players[currentPresidentID].send(toSend)
+								saySomething(players[currentPresidentID].displayName + " view the top three cards of the deck");
+								players[currentPresidentID].send(toSend);
 							}
 							if (numFacist >= 4) {
 								gameLogic(GameState.KILL);
@@ -347,6 +380,8 @@ function gameLogic(nextState) {
 			}
 			sayAndPrint(toSend + "Thank you for playing Secret Hitler, Goodbye!");
 			hitlerID = -1;
+			previousPresidentID = -1;
+			previousChancellorID = -1;
 			facistsIDs = [];
 			players = [];
 			cardsDeck = [];
@@ -355,15 +390,11 @@ function gameLogic(nextState) {
 			break;
 		case GameState.NOMINATE_CHANCELLOR:
 			if (numLiberal >= MAX_LIBERAL) {
-				sayAndPrint("Liberals Won")
-				printGameState()
-				gameLogic(GameState.INIT)
+				win("Liberals");
 				return;
 			}
 			if (numFacist >= MAX_FACIST) {
-				sayAndPrint("Facists Won")
-				printGameState()
-				gameLogic(GameState.INIT)
+				win("Facists");
 				return;
 			}
 			currentPresidentID++;
@@ -382,18 +413,12 @@ function gameLogic(nextState) {
 			break;
 		case GameState.PRESIDENT_DISCARD:
 			if (numFacist >= 3 && currentChancellorID == hitlerID) {
-				sayAndPrint("Facists Won")
-				printGameState()
-				gameLogic(GameState.INIT)
+				win("Facists");
 				return;
 			}
 			saySomething(players[currentPresidentID].displayName + ', choose a card to discard.');
-			console.log("cardsDiscards: " + cardsDiscards.length + "\n cardsDeck: " + cardsDeck.length)
-			if (cardsDeck.length < 3) {
-				shuffleArray(cardsDiscards)
-				cardsDeck = cardsDeck.concat(cardsDiscards);
-			}
-			cardsDrawn = cardsDeck.splice(0, 3)
+			console.log("cardsDiscards: " + cardsDiscards.length + "\n cardsDeck: " + cardsDeck.length);
+			cardsDrawn = drawTopCards(3);
 			printCardsToDiscard(currentPresidentID)
 			break;
 		case GameState.CHANCELLOR_DISCARD:
@@ -468,6 +493,22 @@ function printCardsToDiscard(index) {
 			message.react(numToEmoji[i])
 		}
 	})
+}
 
+function drawTopCards(amount) {
+	validateDeck(amount);
+	return cardsDeck.splice(0, amount);
+}
 
+function validateDeck(amount) {
+	if (cardsDeck.length < amount) {
+		shuffleArray(cardsDiscards);
+		cardsDeck = cardsDeck.concat(cardsDiscards);
+	}
+}
+
+function win(team) {
+	sayAndPrint(team + " won!");
+	printGameState();
+	gameLogic(GameState.INIT);
 }
