@@ -101,6 +101,9 @@ async function gotMessage(message) {
 		guild = message.guild;
 		channelText = message.channel;
 	}
+	if (message.guild !== guild) {
+		return;
+	}
 	var member = guild.member(message.author);
 	// Commands
 	if (message.content.startsWith(prefix)) {
