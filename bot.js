@@ -4,14 +4,25 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessageReactions
     ],
     partials: [
         Partials.Channel
     ] });
 const say = require('say');
+const {
+	NoSubscriberBehavior,
+	StreamType,
+	createAudioPlayer,
+	createAudioResource,
+	entersState,
+	AudioPlayerStatus,
+	VoiceConnectionStatus,
+	joinVoiceChannel,
+} = require('@discordjs/voice');
 require('dotenv').config();
 
 GameState = {
@@ -99,17 +110,16 @@ client.on('messageReactionAdd', gotReaction);
 client.login(process.env.DISCORD_KEY);
 
 async function gotMessage(message) {
-    console.log("Got");
     if (message.author.id === client.user.id) {
         return;
     }
 
-    await joinVoiceChannel(message)
+    await joinVoiceChannelFromMessage(message)
 
     if (message.guild !== guild) {
         return;
     }
-    var member = guild.member(message.author);
+    var member = message.member;
     // Commands
     if (message.content.startsWith(commandPrefix)) {
         const args = message.content.slice(commandPrefix.length).trim().split(/ +/);
@@ -188,7 +198,7 @@ async function gotMessage(message) {
             case GameState.INIT:
                 if (!players.includes(member)) {
                     players.push(member);
-                    message.reply('Hi 😀\nThere are ' + players.length + ' players.');
+                    message.reply('Hi ' + member.displayName + ' 😀\nThere are ' + players.length + ' players.');
                     saySomething(member.displayName + " joined the game!");
                 } else {
                     message.reply("You are already in the game!")
@@ -265,17 +275,18 @@ async function gotMessage(message) {
     }
 }
 
-async function joinVoiceChannel(message) {
+async function joinVoiceChannelFromMessage(message) {
     if (channelVoice == null) {
         // Checking if the message author is in a voice channel.
         if (!message.member.voice.channel) return message.reply("You must be in a voice channel.");
-        // Checking if the bot is in a voice channel.
-        if (!message.guild.me.voice.channel) {
-            // Joining the channel and creating a VoiceConnection.
-            await message.member.voice.channel.join();
-        }
-        channelVoice = message.guild.me.voice.channel;
-        connection = await channelVoice.join();
+        channelVoice = message.member.voice.channel;
+        // Joining the channel and creating a VoiceConnection.
+        const connection = joinVoiceChannel(
+            {
+                channelId: message.member.voice.channel,
+                guildId: message.guild.id,
+                adapterCreator: message.guild.voiceAdapterCreator
+            });
         guild = message.guild;
         channelText = message.channel;
     }
