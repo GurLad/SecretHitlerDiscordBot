@@ -1,5 +1,16 @@
-const Discord = require('discord.js');
-const client = new Discord.Client();
+const { Client, GatewayIntentBits, Partials } = require('discord.js');
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.DirectMessageReactions
+    ],
+    partials: [
+        Partials.Channel
+    ] });
 const say = require('say');
 require('dotenv').config();
 
@@ -81,13 +92,14 @@ client.once('ready', () => {
     console.log('Ready!');
 });
 
-client.on('message', gotMessage);
+client.on('messageCreate', gotMessage);
 
 client.on('messageReactionAdd', gotReaction);
 
 client.login(process.env.DISCORD_KEY);
 
 async function gotMessage(message) {
+    console.log("Got");
     if (message.author.id === client.user.id) {
         return;
     }
