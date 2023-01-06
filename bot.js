@@ -23,6 +23,7 @@ const {
 	VoiceConnectionStatus,
 	joinVoiceChannel,
 } = require('@discordjs/voice');
+const audioPlayer = createAudioPlayer();
 require('dotenv').config();
 
 GameState = {
@@ -128,7 +129,7 @@ async function gotMessage(message) {
             case 'say':
                 saySomething(member.displayName + " said " + args.join(' '));
                 break;
-            case 'setVoice':
+            case 'setvoice':
                 var input = args[0];
                 if (voices.includes(input)) {
                     voice = voicePrefix + input + voiceSuffix;
@@ -137,8 +138,8 @@ async function gotMessage(message) {
                     message.reply('Invalid voice!');
                 }
                 break;
-            case 'listVoices':
-                message.reply(voices.join());
+            case 'listvoices':
+                message.reply(voices.join(', '));
                 break;
             case 'start':
                 if (currentState === GameState.INIT) {
@@ -190,6 +191,7 @@ async function gotMessage(message) {
                 gameLogic(GameState.INIT)
                 break;
             default:
+                message.reply('Invalid command!');
                 break;
         }
     } else {
@@ -280,15 +282,20 @@ async function joinVoiceChannelFromMessage(message) {
         // Checking if the message author is in a voice channel.
         if (!message.member.voice.channel) return message.reply("You must be in a voice channel.");
         channelVoice = message.member.voice.channel;
-        // Joining the channel and creating a VoiceConnection.
-        const connection = joinVoiceChannel(
-            {
-                channelId: message.member.voice.channel,
-                guildId: message.guild.id,
-                adapterCreator: message.guild.voiceAdapterCreator
-            });
         guild = message.guild;
         channelText = message.channel;
+        // Joining the channel and creating a VoiceConnection.
+        connection = joinVoiceChannel(
+            {
+                channelId: message.member.voice.channel.id,
+                guildId: message.guild.id,
+                adapterCreator: message.guild.voiceAdapterCreator,
+                selfDeaf: false
+            });
+        const subscription = connection.subscribe(audioPlayer);
+        connection.on(VoiceConnectionStatus.Ready, () => {
+            console.log('The connection has entered the Ready state - ready to play audio!');
+        });
     }
 }
 
@@ -490,7 +497,8 @@ function saySomething(text) {
             // }).catch((err) => {
             //     console.error(err);
             // });
-            connection.play(soundPath);
+            const resource = createAudioResource(soundPath);
+            audioPlayer.play(resource);
         }
     });
 }
